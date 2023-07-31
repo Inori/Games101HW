@@ -3,8 +3,16 @@
 #include <Eigen/Eigen>
 #include <iostream>
 #include <opencv2/opencv.hpp>
+#include <cmath>
+//#include <glm/glm.hpp>
+//#include <glm/gtc/matrix_transform.hpp>
 
 constexpr double MY_PI = 3.1415926;
+
+float radians(float degrees)
+{
+	return (degrees * MY_PI) / 180.0;
+}
 
 Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos)
 {
@@ -21,13 +29,24 @@ Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos)
 
 Eigen::Matrix4f get_model_matrix(float rotation_angle)
 {
-    Eigen::Matrix4f model = Eigen::Matrix4f::Identity();
+	Eigen::Matrix4f model = Eigen::Matrix4f::Identity();
 
-    // TODO: Implement this function
-    // Create the model matrix for rotating the triangle around the Z axis.
-    // Then return it.
+	// TODO: Implement this function
+	// Create the model matrix for rotating the triangle around the Z axis.
+	// Then return it.
 
-    return model;
+	float r     = radians(rotation_angle);
+	model(0, 0) = std::cos(r);
+	model(0, 1) = -std::sin(r);
+	model(1, 0) = std::sin(r);
+	model(1, 1) = std::cos(r);
+
+	return model;
+}
+
+Eigen::Matrix4f get_rotation(Vector3f axis, float angle)
+{
+	return Eigen::Matrix4f();
 }
 
 Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
@@ -40,6 +59,17 @@ Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio,
     // TODO: Implement this function
     // Create the projection matrix for the given parameters.
     // Then return it.
+
+    float r          = radians(eye_fov);
+	projection(0, 0) = (1.0 / aspect_ratio) * 1.0 / std::tan(r / 2);
+	projection(1, 1) = 1.0 / std::tan(r / 2);
+	projection(2, 2) = (zNear + zFar) / (zNear - zFar);
+	projection(2, 3) = 2.0 * zNear * zFar / (zNear - zFar);
+	projection(3, 2) = -1.0;
+	projection(3, 3) = 0.0;
+
+    // Only for compare
+	//auto glm_perspective = glm::perspective(r, aspect_ratio, zNear, zFar);
 
     return projection;
 }
