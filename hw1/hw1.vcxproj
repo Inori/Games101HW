@@ -72,11 +72,11 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
     <IncludePath>$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)3rdparty\opencv\lib\x64;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)3rdparty\opencv\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <IncludePath>$(IncludePath)</IncludePath>
-    <LibraryPath>$(SolutionDir)3rdparty\opencv\lib\x64;$(LibraryPath)</LibraryPath>
+    <LibraryPath>$(SolutionDir)3rdparty\opencv\lib;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
