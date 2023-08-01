@@ -6,6 +6,7 @@
 #include "rasterizer.hpp"
 #include <opencv2/opencv.hpp>
 #include <math.h>
+#include <algorithm>
 
 
 rst::pos_buf_id rst::rasterizer::load_positions(const std::vector<Eigen::Vector3f> &positions)
@@ -149,25 +150,33 @@ auto to_vec4(const Eigen::Vector3f& v3, float w = 1.0f)
     return Vector4f(v3.x(), v3.y(), v3.z(), w);
 }
 
-static bool insideTriangle(int x, int y, const Vector4f* _v){
-    Vector3f v[3];
-    for(int i=0;i<3;i++)
-        v[i] = {_v[i].x(),_v[i].y(), 1.0};
-    Vector3f f0,f1,f2;
-    f0 = v[1].cross(v[0]);
-    f1 = v[2].cross(v[1]);
-    f2 = v[0].cross(v[2]);
-    Vector3f p(x,y,1.);
-    if((p.dot(f0)*f0.dot(v[2])>0) && (p.dot(f1)*f1.dot(v[0])>0) && (p.dot(f2)*f2.dot(v[1])>0))
-        return true;
-    return false;
+static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector4f* v)
+{
+	float c1 = (x * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * y + v[1].x() * v[2].y() - v[2].x() * v[1].y()) / (v[0].x() * (v[1].y() - v[2].y()) + (v[2].x() - v[1].x()) * v[0].y() + v[1].x() * v[2].y() - v[2].x() * v[1].y());
+	float c2 = (x * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * y + v[2].x() * v[0].y() - v[0].x() * v[2].y()) / (v[1].x() * (v[2].y() - v[0].y()) + (v[0].x() - v[2].x()) * v[1].y() + v[2].x() * v[0].y() - v[0].x() * v[2].y());
+	float c3 = (x * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * y + v[0].x() * v[1].y() - v[1].x() * v[0].y()) / (v[2].x() * (v[0].y() - v[1].y()) + (v[1].x() - v[0].x()) * v[2].y() + v[0].x() * v[1].y() - v[1].x() * v[0].y());
+	return { c1, c2, c3 };
 }
 
-static std::tuple<float, float, float> computeBarycentric2D(float x, float y, const Vector4f* v){
-    float c1 = (x*(v[1].y() - v[2].y()) + (v[2].x() - v[1].x())*y + v[1].x()*v[2].y() - v[2].x()*v[1].y()) / (v[0].x()*(v[1].y() - v[2].y()) + (v[2].x() - v[1].x())*v[0].y() + v[1].x()*v[2].y() - v[2].x()*v[1].y());
-    float c2 = (x*(v[2].y() - v[0].y()) + (v[0].x() - v[2].x())*y + v[2].x()*v[0].y() - v[0].x()*v[2].y()) / (v[1].x()*(v[2].y() - v[0].y()) + (v[0].x() - v[2].x())*v[1].y() + v[2].x()*v[0].y() - v[0].x()*v[2].y());
-    float c3 = (x*(v[0].y() - v[1].y()) + (v[1].x() - v[0].x())*y + v[0].x()*v[1].y() - v[1].x()*v[0].y()) / (v[2].x()*(v[0].y() - v[1].y()) + (v[1].x() - v[0].x())*v[2].y() + v[0].x()*v[1].y() - v[1].x()*v[0].y());
-    return {c1,c2,c3};
+//static bool insideTriangle(int x, int y, const Vector4f* _v){
+//    Vector3f v[3];
+//    for(int i=0;i<3;i++)
+//        v[i] = {_v[i].x(),_v[i].y(), 1.0};
+//    Vector3f f0,f1,f2;
+//    f0 = v[1].cross(v[0]);
+//    f1 = v[2].cross(v[1]);
+//    f2 = v[0].cross(v[2]);
+//    Vector3f p(x,y,1.);
+//    if((p.dot(f0)*f0.dot(v[2])>0) && (p.dot(f1)*f1.dot(v[0])>0) && (p.dot(f2)*f2.dot(v[1])>0))
+//        return true;
+//    return false;
+//}
+
+static bool insideTriangle(float x, float y, const Vector4f* v)
+{
+	// TODO : Implement this function to check if the point (x, y) is inside the triangle represented by _v[0], _v[1], _v[2]
+	auto [alpha, beta, gamma] = computeBarycentric2D(x, y, v);
+	return (alpha > 0.0) && (beta > 0.0) && (gamma > 0.0);
 }
 
 void rst::rasterizer::draw(std::vector<Triangle *> &TriangleList) {
@@ -256,6 +265,17 @@ static Eigen::Vector2f interpolate(float alpha, float beta, float gamma, const E
     return Eigen::Vector2f(u, v);
 }
 
+float rst::rasterizer::interpolate_z(float x, float y, const Triangle& t)
+{
+	const auto v              = t.toVector4();
+	auto [alpha, beta, gamma] = computeBarycentric2D(x, y, t.v);
+
+	float w_reciprocal   = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+	float z_interpolated = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+	z_interpolated *= w_reciprocal;
+	return z_interpolated;
+}
+
 //Screen space rasterization
 void rst::rasterizer::rasterize_triangle(const Triangle& t, const std::array<Eigen::Vector3f, 3>& view_pos) 
 {
@@ -269,18 +289,213 @@ void rst::rasterizer::rasterize_triangle(const Triangle& t, const std::array<Eig
     // float zp = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
     // zp *= Z;
 
-    // TODO: Interpolate the attributes:
-    // auto interpolated_color
-    // auto interpolated_normal
-    // auto interpolated_texcoords
-    // auto interpolated_shadingcoords
+    auto aabb = t.getAABB();
 
-    // Use: fragment_shader_payload payload( interpolated_color, interpolated_normal.normalized(), interpolated_texcoords, texture ? &*texture : nullptr);
-    // Use: payload.view_pos = interpolated_shadingcoords;
-    // Use: Instead of passing the triangle's color directly to the frame buffer, pass the color to the shaders first to get the final color;
-    // Use: auto pixel_color = fragment_shader(payload);
+	for (int y = aabb.top_left.y(); y < aabb.bottom_right.y(); y += 1)
+	{
+		for (int x = aabb.top_left.x(); x < aabb.bottom_right.x(); x += 1)
+		{
+			// struct Sample
+			//{
+			//	bool  inside;
+			//	float z;
+			// };
 
- 
+			// std::array<Sample, 4> sample_list = {};
+			// float                 step        = 1.0 / 3.0;
+			// for (int i = 0; i != 2; ++i)
+			//{
+			//	for (int j = 0; j != 2; ++j)
+			//	{
+			//		Sample& smp = sample_list[2 * i + j];
+			//		float   d_x = static_cast<float>(j + 1) * step;
+			//		float   d_y = static_cast<float>(i + 1) * step;
+			//		float   s_x = static_cast<float>(x) + d_x;
+			//		float   s_y = static_cast<float>(y) + d_y;
+			//		smp.inside  = insideTriangle(s_x, s_y, t.v);
+			//		smp.z       = interpolate_z(s_x, s_y, t);
+			//	}
+			// }
+
+			// bool  inside    = false;
+			// float influence = 0.0;
+			// float z_min     = sample_list[0].z;
+			// for (const auto& smp : sample_list)
+			//{
+			//	inside |= smp.inside;
+			//	influence += (smp.inside ? 1.0 : 0.0);
+			//	if (z_min > smp.z)
+			//	{
+			//		z_min = smp.z;
+			//	}
+			// }
+
+			// if (!inside)
+			//{
+			//	continue;
+			// }
+
+			float s_x = static_cast<float>(x) + 0.5;
+			float s_y = static_cast<float>(y) + 0.5;
+			if (!insideTriangle(s_x, s_y, t.v))
+			{
+				continue;
+			}
+
+			float z_min    = interpolate_z(s_x, s_y, t);
+			int   index    = get_index(x, y);
+			auto  z_before = depth_buf[index];
+			if (z_min > z_before)
+			{
+				continue;
+			}
+
+			depth_buf[index] = z_min;
+
+			// Eigen::Vector3f background_color = frame_buf[index];
+
+			// float avg = influence / 4.0;
+
+			auto [alpha, beta, gamma] = computeBarycentric2D(s_x, s_y, t.v);
+			float weight              = 1.0;
+			// TODO: Interpolate the attributes:
+			auto interpolated_color         = interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], weight);
+			auto interpolated_normal        = interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], weight);
+			auto interpolated_texcoords     = interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], weight);
+			auto interpolated_shadingcoords = interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], weight);
+
+            // Use: fragment_shader_payload payload( interpolated_color, interpolated_normal.normalized(), interpolated_texcoords, texture ? &*texture : nullptr);
+			// Use: payload.view_pos = interpolated_shadingcoords;
+			// Use: Instead of passing the triangle's color directly to the frame buffer, pass the color to the shaders first to get the final color;
+			// Use: auto pixel_color = fragment_shader(payload);
+
+			fragment_shader_payload payload(interpolated_color, interpolated_normal.normalized(), interpolated_texcoords, texture.has_value() ? &*texture : nullptr);
+			payload.view_pos = interpolated_shadingcoords;
+
+			// Vector3f pixel_color = fragment_shader(payload) * avg + (1.0 - avg) * background_color;
+			Vector3f pixel_color = fragment_shader(payload);
+
+			Vector2i p = { x, y };
+
+			set_pixel(p, pixel_color);
+		}
+	}
+
+
+ //   auto v = t.toVector4();
+
+	//float max_x, min_x, max_y, min_y;
+
+	//max_x = v[0].x() > v[1].x() ? v[0].x() : v[1].x();
+	//max_x = max_x > v[2].x() ? max_x : v[2].x();
+
+	//min_x = v[0].x() < v[1].x() ? v[0].x() : v[1].x();
+	//min_x = min_x < v[2].x() ? min_x : v[2].x();
+
+	//max_y = v[0].y() > v[1].y() ? v[0].y() : v[1].y();
+	//max_y = max_y > v[2].y() ? max_y : v[2].y();
+
+	//min_y = v[0].y() < v[1].y() ? v[0].y() : v[1].y();
+	//min_y = min_y < v[2].y() ? min_y : v[2].y();
+
+	//for (int i = min_x; i < max_x; i++)
+	//{
+	//	for (int j = min_y; j < max_y; j++)
+	//	{
+	//		if (insideTriangle(i, j, t.v) == true)
+	//		{
+	//			auto [alpha, beta, gamma] = computeBarycentric2D(i, j, t.v);
+	//			float Z                   = 1.0 / (alpha / v[0].w() + beta / v[1].w() + gamma / v[2].w());
+	//			float zp                  = alpha * v[0].z() / v[0].w() + beta * v[1].z() / v[1].w() + gamma * v[2].z() / v[2].w();
+	//			zp *= Z;
+	//			float index = get_index(i, j);
+	//			if (zp <= this->depth_buf[index])
+	//			{
+	//				auto interpolated_color         = interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], 1);                 // interpolate color
+	//				auto interpolated_normal        = interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], 1);              // interpolate normal
+	//				auto interpolated_texcoords     = interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], 1);  // interpolate texture
+	//				auto interpolated_shadingcoords = interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], 1);              // interpolate viewpos
+	//				this->depth_buf[index]          = zp;                                                                                     // update zbuffer
+	//				fragment_shader_payload payload(interpolated_color, interpolated_normal.normalized(), interpolated_texcoords, texture ? &*texture : nullptr);
+	//				payload.view_pos = interpolated_shadingcoords;
+	//				auto pixel_color = fragment_shader(payload);
+	//				set_pixel(Eigen::Vector2i(700 - i, 700 - j), pixel_color);
+	//			}
+	//		}
+	//	}
+	//}
+
+ //   auto v = t.toVector4();
+
+	//float max_x, min_x, max_y, min_y;
+
+	//max_x = v[0].x() > v[1].x() ? v[0].x() : v[1].x();
+	//max_x = max_x > v[2].x() ? max_x : v[2].x();
+
+	//min_x = v[0].x() < v[1].x() ? v[0].x() : v[1].x();
+	//min_x = min_x < v[2].x() ? min_x : v[2].x();
+
+	//max_y = v[0].y() > v[1].y() ? v[0].y() : v[1].y();
+	//max_y = max_y > v[2].y() ? max_y : v[2].y();
+
+	//min_y = v[0].y() < v[1].y() ? v[0].y() : v[1].y();
+	//min_y = min_y < v[2].y() ? min_y : v[2].y();
+
+ //   min_x = aabb.top_left.x();
+	//min_y = aabb.top_left.y();
+	//max_x = aabb.bottom_right.x();
+	//max_y = aabb.bottom_right.y();
+
+	//for (int j = min_y; j < max_y; j++ )
+	//{
+	//	for (int i = min_x; i < max_x; i++)
+	//	{
+	//		float s_x = static_cast<float>(i) + 0.5;
+	//		float s_y = static_cast<float>(j) + 0.5;
+	//		if (!insideTriangle(s_x, s_y, t.v))
+	//		{
+	//			continue;
+	//		}
+
+	//		float z_min    = interpolate_z(s_x, s_y, t);
+	//		int   index    = get_index(i, j);
+	//		auto  z_before = depth_buf[index];
+	//		if (z_min > z_before)
+	//		{
+	//			continue;
+	//		}
+
+	//		depth_buf[index] = z_min;
+
+	//		// Eigen::Vector3f background_color = frame_buf[index];
+
+	//		// float avg = influence / 4.0;
+
+	//		auto [alpha, beta, gamma] = computeBarycentric2D(s_x, s_y, t.v);
+	//		float weight              = 1.0;
+	//		// TODO: Interpolate the attributes:
+	//		auto interpolated_color         = interpolate(alpha, beta, gamma, t.color[0], t.color[1], t.color[2], weight);
+	//		auto interpolated_normal        = interpolate(alpha, beta, gamma, t.normal[0], t.normal[1], t.normal[2], weight);
+	//		auto interpolated_texcoords     = interpolate(alpha, beta, gamma, t.tex_coords[0], t.tex_coords[1], t.tex_coords[2], weight);
+	//		auto interpolated_shadingcoords = interpolate(alpha, beta, gamma, view_pos[0], view_pos[1], view_pos[2], weight);
+
+	//		fragment_shader_payload payload(interpolated_color, interpolated_normal.normalized(), interpolated_texcoords, texture.has_value() ? &*texture : nullptr);
+	//		payload.view_pos = interpolated_shadingcoords;
+
+	//		// Vector3f pixel_color = fragment_shader(payload) * avg + (1.0 - avg) * background_color;
+	//		Vector3f pixel_color = fragment_shader(payload);
+	//		// Vector3f pixel_color = Vector3f(255.0, 255.0, 255.0);
+
+	//		Vector2i p = { i, j };
+
+	//		// Use: fragment_shader_payload payload( interpolated_color, interpolated_normal.normalized(), interpolated_texcoords, texture ? &*texture : nullptr);
+	//		// Use: payload.view_pos = interpolated_shadingcoords;
+	//		// Use: Instead of passing the triangle's color directly to the frame buffer, pass the color to the shaders first to get the final color;
+	//		// Use: auto pixel_color = fragment_shader(payload);
+
+	//		set_pixel(p, pixel_color);
+	//	}
+	//}
 }
 
 void rst::rasterizer::set_model(const Eigen::Matrix4f& m)
