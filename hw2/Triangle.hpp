@@ -10,6 +10,11 @@
 
 using namespace Eigen;
 class Triangle{
+	struct AABB
+	{
+		Vector2f top_left     = { 0.0, 0.0 };
+		Vector2f bottom_right = { 0.0, 0.0 };
+	};
 
 public:
     Vector3f v[3]; /*the original coordinates of the triangle, v0, v1, v2 in counter clockwise order*/
@@ -27,6 +32,7 @@ public:
     Vector3f getColor() const { return color[0]*255; } // Only one color per triangle.
     void setTexCoord(int ind, float s, float t); /*set i-th vertex texture coordinate*/
     std::array<Vector4f, 3> toVector4() const;
+	AABB                    getAABB() const;
 };
 
 

@@ -49,3 +49,37 @@ std::array<Vector4f, 3> Triangle::toVector4() const
     std::transform(std::begin(v), std::end(v), res.begin(), [](auto& vec) { return Eigen::Vector4f(vec.x(), vec.y(), vec.z(), 1.f); });
     return res;
 }
+
+Triangle::AABB Triangle::getAABB() const
+{
+	AABB aabb         = {};
+	aabb.top_left     = { v[0].x(), v[0].y() };
+	aabb.bottom_right = { v[0].x(), v[0].y() };
+
+    for (const auto& p : v)
+    {
+        // find min x
+        if (p.x() < aabb.top_left.x())
+        {
+			aabb.top_left.x() = p.x();
+        }
+		// find min y
+		if (p.y() < aabb.top_left.y())
+		{
+			aabb.top_left.y() = p.y();
+		}
+		// find max x
+		if (p.x() > aabb.bottom_right.x())
+		{
+			aabb.bottom_right.x() = p.x();
+		}
+		// find max y
+		if (p.y() > aabb.bottom_right.y())
+		{
+			aabb.bottom_right.y() = p.y();
+		}
+    }
+
+    return aabb;
+}
+

@@ -7,6 +7,11 @@
 
 constexpr double MY_PI = 3.1415926;
 
+inline float radians(float degrees)
+{
+	return (degrees * MY_PI) / 180.0;
+}
+
 Eigen::Matrix4f get_view_matrix(Eigen::Vector3f eye_pos)
 {
     Eigen::Matrix4f view = Eigen::Matrix4f::Identity();
@@ -31,7 +36,17 @@ Eigen::Matrix4f get_model_matrix(float rotation_angle)
 Eigen::Matrix4f get_projection_matrix(float eye_fov, float aspect_ratio, float zNear, float zFar)
 {
     // TODO: Copy-paste your implementation from the previous assignment.
-    Eigen::Matrix4f projection;
+    Eigen::Matrix4f projection = Eigen::Matrix4f::Identity();
+
+    float r = radians(eye_fov);
+    float const tan_half_fovy = tan(r / static_cast<float>(2));
+
+	projection(0, 0) = (static_cast<float>(1) / aspect_ratio) * (static_cast<float>(1) / tan_half_fovy);
+	projection(1, 1) = static_cast<float>(1) / tan_half_fovy;
+	projection(2, 2) = (zNear + zFar) / (zNear - zFar);
+	projection(2, 3) = static_cast<float>(2) * zNear * zFar / (zNear - zFar);
+	projection(3, 2) = -static_cast<float>(1);
+	projection(3, 3) = 0.0;
 
     return projection;
 }

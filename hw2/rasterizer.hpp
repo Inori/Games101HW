@@ -79,6 +79,8 @@ namespace rst
 
         void rasterize_triangle(const Triangle& t);
 
+        float interpolate_z(float x, float y, const Triangle& t);
+
         // VERTEX SHADER -> MVP -> Clipping -> /.W -> VIEWPORT -> DRAWLINE/DRAWTRI -> FRAGSHADER
 
     private:
