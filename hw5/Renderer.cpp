@@ -186,7 +186,6 @@ Vector3f castRay(
                     // is the point in shadow, and is the nearest occluding object closer to the object than the light itself?
                     auto shadow_res = trace(shadowPointOrig, lightDir, scene.get_objects());
                     bool inShadow = shadow_res && (shadow_res->tNear * shadow_res->tNear < lightDistance2);
-
                     lightAmt += inShadow ? 0 : light->intensity * LdotN;
                     Vector3f reflectionDirection = reflect(-lightDir, N);
 
@@ -213,7 +212,7 @@ void Renderer::Render(const Scene& scene)
     std::vector<Vector3f> framebuffer(scene.width * scene.height);
 
     float scale = std::tan(deg2rad(scene.fov * 0.5f));
-    float imageAspectRatio = scene.width / (float)scene.height;
+	float imageAspectRatio = (float)scene.width / (float)scene.height;
 
     // Use this variable as the eye position to start your rays.
     Vector3f eye_pos(0);
@@ -223,15 +222,17 @@ void Renderer::Render(const Scene& scene)
         for (int i = 0; i < scene.width; ++i)
         {
             // generate primary ray direction
-            float x = 0.0;
-            float y = 0.0;
-            // TODO: Find the x and y positions of the current pixel to get the direction
-            // vector that passes through it.
-            // Also, don't forget to multiply both of them with the variable *scale*, and
-            // x (horizontal) variable with the *imageAspectRatio*            
-
-            Vector3f dir = Vector3f(x, y, -1); // Don't forget to normalize this direction!
-            framebuffer[m++] = castRay(eye_pos, dir, scene, 0);
+			float x  = 0.0;
+			float y  = 0.0;
+			// TODO: Find the x and y positions of the current pixel to get the direction
+			// vector that passes through it.
+			// Also, don't forget to multiply both of them with the variable *scale*, and
+			// x (horizontal) variable with the *imageAspectRatio*
+			x = (2.0 * static_cast<float>(i) / static_cast<float>(scene.width) - 1.0) * scale * imageAspectRatio;
+			y = (1.0 - 2.0 * static_cast<float>(j) / static_cast<float>(scene.height)) * scale;
+			
+			Vector3f dir     = normalize(Vector3f(x, y, -1));  // Don't forget to normalize this direction!
+			framebuffer[m++] = castRay(eye_pos, dir, scene, 0);
         }
         UpdateProgress(j / (float)scene.height);
     }
