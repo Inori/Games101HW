@@ -131,7 +131,7 @@ Intersection BVHAccel::getIntersection(BVHBuildNode* node, const Ray& ray) const
     {
 		return li.distance < ri.distance ? li : ri;
     }
-	else
+	else if (li.happened || ri.happened)
 	{
 		return li.happened ? li : ri;
 	}
