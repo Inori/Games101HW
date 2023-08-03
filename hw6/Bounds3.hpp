@@ -86,6 +86,8 @@ class Bounds3
 
     inline bool IntersectP(const Ray& ray, const Vector3f& invDir,
                            const std::array<int, 3>& dirisNeg) const;
+
+    inline bool IntersectP(const Ray& ray) const;
 };
 
 
@@ -97,6 +99,38 @@ inline bool Bounds3::IntersectP(const Ray& ray, const Vector3f& invDir,
     // dirIsNeg: ray direction(x,y,z), dirIsNeg=[int(x>0),int(y>0),int(z>0)], use this to simplify your logic
     // TODO test if ray bound intersects
     
+    float t0 = 0.0, t1 = 0.0;
+    // N -> X
+	t0 = (pMin.x - ray.origin.x) * invDir.x;
+	t1 = (pMax.x - ray.origin.x) * invDir.x;
+	float tx_min = std::min(t0, t1);
+	float tx_max = std::max(t0, t1);
+	// N -> Y
+	t0           = (pMin.y - ray.origin.y) * invDir.y;
+	t1           = (pMax.y - ray.origin.y) * invDir.y;
+	float ty_min = std::min(t0, t1);
+	float ty_max = std::max(t0, t1);
+	// N -> Z
+	t0           = (pMin.z - ray.origin.z) * invDir.z;
+	t1           = (pMax.z - ray.origin.z) * invDir.z;
+	float tz_min = std::min(t0, t1);
+	float tz_max = std::max(t0, t1);
+
+    float t_enter = std::max(std::max(tx_min, ty_min), tz_min);
+	float t_exit  = std::min(std::min(tx_max, ty_max), tz_max);
+
+    bool intersected = (t_exit >= 0.0) && (t_enter < t_exit);
+	return intersected;
+}
+
+bool Bounds3::IntersectP(const Ray& ray) const
+{
+	Vector3f invDir = Vector3f(1.0 / ray.direction.x, 1.0 / ray.direction.y, 1.0 / ray.direction.z);
+	std::array<int, 3> dirIsNeg = {};
+	dirIsNeg[0]                 = (int)(ray.direction.x > 0.0);
+	dirIsNeg[1]                 = (int)(ray.direction.y > 0.0);
+	dirIsNeg[2]                 = (int)(ray.direction.z > 0.0);
+	return IntersectP(ray, invDir, dirIsNeg);
 }
 
 inline Bounds3 Union(const Bounds3& b1, const Bounds3& b2)

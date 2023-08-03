@@ -212,8 +212,11 @@ inline Intersection Triangle::getIntersection(Ray ray)
 {
     Intersection inter;
 
+    // 锐角，出射
     if (dotProduct(ray.direction, normal) > 0)
         return inter;
+
+    // 和三角形平面平行
     double u, v, t_tmp = 0;
     Vector3f pvec = crossProduct(ray.direction, e2);
     double det = dotProduct(e1, pvec);
@@ -229,12 +232,28 @@ inline Intersection Triangle::getIntersection(Ray ray)
     v = dotProduct(ray.direction, qvec) * det_inv;
     if (v < 0 || u + v > 1)
         return inter;
-    t_tmp = dotProduct(e2, qvec) * det_inv;
 
     // TODO find ray triangle intersection
+	Vector3f s  = tvec;
+	Vector3f s1 = pvec;
+	Vector3f s2 = qvec;
 
+	float s1e1_reciprocal = det_inv;
+	t_tmp                 = dotProduct(s2, e2) * det_inv;
+	u                     = dotProduct(s1, s) * det_inv;
+	v                     = dotProduct(s2, ray.direction) * det_inv;
+	float w               = 1.0 - u - v;
+	bool  intersected     = (u > 0.0) && (v > 0.0) && (w > 0.0) && (t_tmp > 0.0);
 
-
+    if (intersected)
+    {
+		inter.happened = true;
+		inter.coords   = ray.origin + ray.direction * t_tmp;
+		inter.normal   = normal;
+		inter.distance = distance(ray.origin, inter.coords);
+		inter.obj      = this;
+		inter.m        = this->m;
+    }
 
     return inter;
 }
