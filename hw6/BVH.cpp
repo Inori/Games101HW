@@ -136,5 +136,6 @@ Intersection BVHAccel::getIntersection(BVHBuildNode* node, const Ray& ray) const
 		return li.happened ? li : ri;
 	}
 
+    // both left and right are not intersected, it is possible for BVH
 	return itsct;
 }
