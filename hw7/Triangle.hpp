@@ -250,9 +250,24 @@ inline Intersection Triangle::getIntersection(Ray ray)
     v = dotProduct(ray.direction, qvec) * det_inv;
     if (v < 0 || u + v > 1)
         return inter;
-    t_tmp = dotProduct(e2, qvec) * det_inv;
+
+	t_tmp = dotProduct(e2, qvec) * det_inv;
 
     // TODO find ray triangle intersection
+
+	float w           = 1.0 - u - v;
+	bool  intersected = (u > 0.0) && (v > 0.0) && (w > 0.0) && (t_tmp > 0.0);
+
+	if (intersected)
+	{
+		inter.happened = true;
+		inter.coords   = ray(t_tmp);;
+		inter.normal   = normal;
+		inter.emit     = m->getEmission();
+		inter.distance = distance(ray.origin, inter.coords);
+		inter.obj      = this;
+		inter.m        = this->m;
+	}
 
     return inter;
 }

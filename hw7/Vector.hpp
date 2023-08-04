@@ -77,6 +77,17 @@ inline Vector3f normalize(const Vector3f &v)
     return v;
 }
 
+inline float distance(const Vector3f& v1, const Vector3f& v2)
+{
+	Vector3f vec  = v1 - v2;
+	float    mag2 = vec.x * vec.x + vec.y * vec.y + vec.z * vec.z;
+	if (mag2 > 0)
+	{
+		return sqrtf(mag2);
+	}
+	return 0.0;
+}
+
 inline float dotProduct(const Vector3f &a, const Vector3f &b)
 { return a.x * b.x + a.y * b.y + a.z * b.z; }
 
