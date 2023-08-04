@@ -7,6 +7,4 @@ https://www.bilibili.com/video/BV1X7411F744/
 hw4 hw8和Rendering关系不是很大，不太感兴趣就没写
 
 
-<img src="images/hw3.jpg" width="300px" height="300px">
-<img src="images/hw5.jpg" width="300px" height="300px">
-<img src="images/hw7.jpg" width="300px" height="300px">
+<img src="images/hw3.jpg" width="300px" height="300px"><img src="images/hw5.jpg" width="300px" height="300px"><img src="images/hw7.jpg" width="300px" height="300px">
